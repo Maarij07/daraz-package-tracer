@@ -6,10 +6,21 @@ import 'dart:convert';
 import 'package:intl/intl.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:camera/camera.dart';
-import 'package:image_picker/image_picker.dart';
+
+import 'package:permission_handler/permission_handler.dart';
+
+List<CameraDescription>? cameras;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize cameras
+  try {
+    cameras = await availableCameras();
+  } on CameraException {
+    print('Error initializing cameras');
+  }
+  
   runApp(const MyApp());
 }
 
@@ -24,8 +35,78 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
       ),
-      home: const MainScreen(),
+      home: const SplashScreen(),
       debugShowCheckedModeBanner: false,
+    );
+  }
+}
+
+// Splash Screen Widget
+class SplashScreen extends StatefulWidget {
+  const SplashScreen({super.key});
+
+  @override
+  State<SplashScreen> createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends State<SplashScreen> {
+  @override
+  void initState() {
+    super.initState();
+    _requestPermissions();
+  }
+
+  Future<void> _requestPermissions() async {
+    // Request camera permission
+    await Permission.camera.request();
+    
+    // Also request storage permission
+    await Permission.storage.request();
+    
+    // Wait a bit to show the splash screen
+    await Future.delayed(const Duration(seconds: 2));
+    
+    // Navigate to main screen after permissions are handled
+    if (mounted) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => const MainScreen()),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.blue,
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.camera_alt,
+              size: 100,
+              color: Colors.white,
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              'Daraz Packing Proof',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              'Secure & Reliable',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.white70,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -239,70 +320,7 @@ class _RecordingScreenState extends State<RecordingScreen> {
           flex: 4,
           child: Container(
             color: Colors.black87,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                // Capture view
-                Container(
-                  width: double.infinity,
-                  height: double.infinity,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.blueGrey[800]!,
-                        Colors.blueGrey[900]!,
-                      ],
-                    ),
-                  ),
-                  child: const Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                      Icon(
-                        Icons.camera_alt,
-                        size: 80,
-                        color: Colors.white38,
-                      ),
-                      SizedBox(height: 16),
-                      Text(
-                        'Capture Order Image',
-                        style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 18,
-                        ),
-                      ),
-                      Text(
-                        'Point camera at order invoice',
-                        style: TextStyle(
-                          color: Colors.white54,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                
-                // Invoice display if captured
-                if (_invoiceNumber.isNotEmpty)
-                  Positioned(
-                    top: 20,
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      color: Colors.black54,
-                      child: Text(
-                        'Invoice: $_invoiceNumber',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
+            child: _buildCaptureStack(),
           ),
         ),
         
@@ -362,6 +380,73 @@ class _RecordingScreenState extends State<RecordingScreen> {
             ),
           ),
         ),
+      ],
+    );
+  }
+
+  Widget _buildCaptureStack() {
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        // Capture view
+        Container(
+          width: double.infinity,
+          height: double.infinity,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Colors.blueGrey[800]!,
+                Colors.blueGrey[900]!,
+              ],
+            ),
+          ),
+          child: const Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.camera_alt,
+                  size: 80,
+                  color: Colors.white38,
+                ),
+                SizedBox(height: 16),
+                Text(
+                  'Capture Order Image',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 18,
+                  ),
+                ),
+                Text(
+                  'Point camera at order invoice',
+                  style: TextStyle(
+                    color: Colors.white54,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        // Invoice display if captured
+        if (_invoiceNumber.isNotEmpty)
+          Positioned(
+            top: 20,
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              color: Colors.black54,
+              child: Text(
+                'Invoice: $_invoiceNumber',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
       ],
     );
   }
